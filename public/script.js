@@ -4,6 +4,8 @@ const ny = 10;
 const SAT = 0.99;
 const VAL = 0.99;
 
+var winky_blinky;
+
 var hue = 0.2;
 var color = hsvToColor(hue, SAT, VAL);
 
@@ -106,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	var height = window.innerHeight;
 	var drawing = false;
 	var lastX, lastY;
+
 	console.log(color)
 	canvas.width = width;
 	canvas.height = height;
@@ -113,7 +116,15 @@ document.addEventListener("DOMContentLoaded", function() {
 	drawPalette(canvas, 0.75);
 	drawHues(canvas);
 
-	var socket = io.connect();
+	const request = new XMLHttpRequest();
+	request.open("GET", "http://localhost:3000/boards");
+	request.send();
+	request.onload = () => {
+		if(request.status === 200) {
+			console.log(request.response);
+			winky_blinky = JSON.parse(request.response);
+		}
+	}
 
 	canvas.onmousedown = function(e) {
 		const x = e.clientX;
@@ -139,14 +150,29 @@ document.addEventListener("DOMContentLoaded", function() {
 	canvas.onmouseup = function(e) {
 		const x = e.clientX;
 		const y = e.clientY;
+		if(isInPalette(x, y)) {
+			color = paletteColor(x, y);
+		}
+
 		drawing = false;
-		if( isInCanvas(x, y) ) {
-			drawLight(context, x, y, color)
-			socket.emit('drop', {
-				'x': x,
-				'y': y,
-				'color': color
-			});
+
+		const light = winky_blinky.board.find(e => {
+			if(Math.abs(e.x-x) <= 5 && Math.abs(e.y-y) <= 5)
+				return e;
+		});
+		console.log("light: " + JSON.stringify(light));
+		if( light ) {
+			light.color = color;
+			drawLight(context, light.x, light.y, color);
+			const request = new XMLHttpRequest();
+			request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
+			request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+			request.send(JSON.stringify(light));
+			request.onload = () => {
+				if(request.status === 200) {
+					console.log("lights set complete successfully");
+				}
+			}
 		}
 		if( isInPalette(x, y) ) {
 			color = paletteColor(x, y);
@@ -159,8 +185,4 @@ document.addEventListener("DOMContentLoaded", function() {
 			console.log("hue: " + hue.toString())
 		}
 	}
-
-	socket.on('drop', function(data) {
-		drawLight(context, data.x, data.y, data.color);
-	});
 });

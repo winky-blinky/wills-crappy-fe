@@ -2,7 +2,6 @@ var express = require('express');
 var app = express();
 var http = require('http');
 const httpServer = http.Server(app)
-var io = require('socket.io')(httpServer);
 const bodyParser = require('body-parser');
 const request = require('request');
 
@@ -28,16 +27,12 @@ app.put('/pixel/:id', function (req, res) {
 		    'Content-Type': 'application/json',
 		  }
 		});
-	request.write(JSON.stringify(req.body));
-	request.end();
+	request.write(JSON.stringify(req.body), () => {
+		request.end();
+		res.send(request.response);		
+	});
 });
 
 httpServer.listen(port, function() {
 	console.log('Server running on port ' + port);
-});
-
-io.on('connection', function (socket) {
-	socket.on('drop', function (data) {
-		socket.broadcast.emit('drop', data);
-	});
 });

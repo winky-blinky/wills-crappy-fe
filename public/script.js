@@ -1,4 +1,4 @@
-const w = 20;
+const w = 10;
 const nx = 10;
 const ny = 10;
 const SAT = 0.99;
@@ -17,12 +17,19 @@ function xToHue(x) {
 	return Math.min(Math.max((x-250)/250, 0), 1);
 }
 
-function drawLight(context, x, y, color) {
-	lx = light(x);
-	ly = light(y);
+function findLight(x, y) {
+	return winky_blinky.board.find(e => {
+		if(Math.abs(e.x-x) <= 5 && Math.abs(e.y-y) <= 5)
+			return e;
+	});
+}
+
+function drawLight(context, light, color) {
+	lx = light.x;
+	ly = light.y;
 	if( isInCanvas(lx, ly) ) {
 		context.fillStyle = color;
- 		context.fillRect(lx*w, ly*w, w, w);
+ 		context.fillRect(lx, ly, w, w);
 		context.stroke();
 	}
 }
@@ -101,6 +108,16 @@ function paletteColor(x, y) {
 	return hsvToColor(hue, (x-250)/500, y/400);
 }
 
+function drawBoard(context, winky_blinky) {
+	winky_blinky.board.forEach(light => {
+		context.beginPath();
+		context.rect(light.x, light.y, 10, 10);
+		context.strokeStyle = "gray";
+		context.lineWidth = 1;
+		context.stroke();
+	});
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 	var canvas = document.getElementById('canvas');
 	var context = canvas.getContext('2d');
@@ -123,6 +140,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		if(request.status === 200) {
 			console.log(request.response);
 			winky_blinky = JSON.parse(request.response);
+			drawBoard(context, winky_blinky);
 		}
 	}
 
@@ -140,8 +158,8 @@ document.addEventListener("DOMContentLoaded", function() {
 		const x = e.clientX;
 		const y = e.clientY;
 		if( drawing ) {
-			drawLight(context, lastX, lastY, 'white');
-			drawLight(context, x, y, color);
+			drawLight(context, findLight(lastX, lastY), 'white');
+			drawLight(context, findLight(x, y), color);
 			lastX = x;
 			lastY = y;
 		}
@@ -156,23 +174,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
 		drawing = false;
 
-		const light = winky_blinky.board.find(e => {
-			if(Math.abs(e.x-x) <= 5 && Math.abs(e.y-y) <= 5)
-				return e;
-		});
+		const light = findLight(x, y);
 		console.log("light: " + JSON.stringify(light));
-		if( light ) {
+		if(light) {
 			light.color = color;
-			drawLight(context, light.x, light.y, color);
+			drawLight(context, light, color);
 			const request = new XMLHttpRequest();
 			request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
 			request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
-			request.send(JSON.stringify(light));
 			request.onload = () => {
 				if(request.status === 200) {
 					console.log("lights set complete successfully");
 				}
 			}
+			request.send(JSON.stringify(light));
 		}
 		if( isInPalette(x, y) ) {
 			color = paletteColor(x, y);

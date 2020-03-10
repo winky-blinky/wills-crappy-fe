@@ -118,6 +118,22 @@ function drawBoard(context, winky_blinky) {
 	});
 }
 
+function updateHardware(context, light, color) {
+	if(light) {
+		light.color = color;
+		drawLight(context, light, color);
+		const request = new XMLHttpRequest();
+		request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
+		request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+		request.onload = () => {
+			if(request.status === 200) {
+				console.log("lights set complete successfully");
+			}
+		}
+		request.send(JSON.stringify(light));
+	}
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 	var canvas = document.getElementById('canvas');
 	var context = canvas.getContext('2d');
@@ -151,6 +167,7 @@ document.addEventListener("DOMContentLoaded", function() {
 			drawing = true;
 			lastX = x;
 			lastY = y;
+			updateHardware(context, findLight(x, y), color);
 		}
 	}
 
@@ -158,8 +175,14 @@ document.addEventListener("DOMContentLoaded", function() {
 		const x = e.clientX;
 		const y = e.clientY;
 		if( drawing ) {
-			drawLight(context, findLight(lastX, lastY), 'white');
-			drawLight(context, findLight(x, y), color);
+			const lastLight = findLight(lastX, lastY);
+			const thisLight = findLight(x, y);
+
+			if(lastLight.id !== thisLight.id) {
+				updateHardware(context, thisLight, color);
+				drawLight(context, thisLight, color);
+			}
+
 			lastX = x;
 			lastY = y;
 		}
@@ -176,19 +199,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
 		const light = findLight(x, y);
 		console.log("light: " + JSON.stringify(light));
-		if(light) {
-			light.color = color;
-			drawLight(context, light, color);
-			const request = new XMLHttpRequest();
-			request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
-			request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
-			request.onload = () => {
-				if(request.status === 200) {
-					console.log("lights set complete successfully");
-				}
-			}
-			request.send(JSON.stringify(light));
-		}
+
+		updateHardware(context, light, color);
+
 		if( isInPalette(x, y) ) {
 			color = paletteColor(x, y);
 			console.log("color: " + color);

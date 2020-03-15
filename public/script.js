@@ -57,7 +57,6 @@ function hsvToColor(h, s, v) {
         case 5: r = v; g = p; b = q; break;
     }
     const rgb = {r: Math.round(r*255), g: Math.round(g*255), b: Math.round(b*255)};
-
 		var c = Math.floor(rgb.r*256*256 + rgb.g*256 + rgb.b).toString(16);
 		if( c.length%2 == 1 ) {
 			c = "0" + c;
@@ -70,7 +69,7 @@ function drawPalette(canvas) {
 	for(x=0; x<canvas.width; ++x) {
 		for(y=0; y<canvas.height; ++y) {
 			if(isInPalette(x, y)) {
-				context.fillStyle = paletteColor(x, y);
+				context.fillStyle = calcPaletteColor(x, y);
 		 		context.fillRect(x, y, 1, 1);
 				context.stroke();
 			}
@@ -104,7 +103,17 @@ function isInHue(x, y) {
 	return light(y) == 0 && light(x) > nx;
 }
 
-function paletteColor(x, y) {
+function paletteColor(context, x, y) {
+	const c = context.getImageData(x, y, 1, 1).data;
+	console.log(c);
+	var color = "#";
+	color += (c[0] < 16 ? "0" : "") + c[0].toString(16);
+	color += (c[1] < 16 ? "0" : "") + c[1].toString(16);
+	color += (c[2] < 16 ? "0" : "") + c[2].toString(16);
+	return color;
+}
+
+function calcPaletteColor(x, y) {
 	return hsvToColor(hue, (x-250)/500, y/400);
 }
 
@@ -121,13 +130,12 @@ function drawBoard(context, winky_blinky) {
 function updateHardware(context, light, color) {
 	if(light) {
 		light.color = color;
-		drawLight(context, light, color);
 		const request = new XMLHttpRequest();
 		request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
 		request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 		request.onload = () => {
 			if(request.status === 200) {
-				console.log("lights set complete successfully");
+				console.log("updateHardware successful");
 			}
 		}
 		request.send(JSON.stringify(light));
@@ -150,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	drawHues(canvas);
 
 	const request = new XMLHttpRequest();
-	request.open("GET", "http://localhost:3000/boards");
+	request.open("GET", "http://localhost:3000/boards/8c723198-19ef-46fb-93ca-71114cfd151f");
 	request.send();
 	request.onload = () => {
 		if(request.status === 200) {
@@ -165,48 +173,54 @@ document.addEventListener("DOMContentLoaded", function() {
 		const y = e.clientY;
 		if( isInCanvas(x, y) ) {
 			drawing = true;
-			lastX = x;
-			lastY = y;
-			updateHardware(context, findLight(x, y), color);
+			const light = findLight(x, y);
+			updateHardware(context, light, color);
+			drawLight(context, light, color);
 		}
+		lastX = x;
+		lastY = y;
 	}
 
 	canvas.onmousemove = function(e) {
 		const x = e.clientX;
 		const y = e.clientY;
 		if( drawing ) {
-			const lastLight = findLight(lastX, lastY);
-			const thisLight = findLight(x, y);
+			if( isInCanvas(x, y) ) {
+				const lastLight = findLight(lastX, lastY);
+				const thisLight = findLight(x, y);
 
-			if(lastLight.id !== thisLight.id) {
-				updateHardware(context, thisLight, color);
-				drawLight(context, thisLight, color);
+				if(lastLight.id !== thisLight.id) {
+					updateHardware(context, thisLight, color);
+					drawLight(context, thisLight, color);
+				}
+
+				lastX = x;
+				lastY = y;
 			}
-
-			lastX = x;
-			lastY = y;
+		}
+		if(isInHue(x, y)) {
+			if(Math.abs(lastX - x) > 10) {
+				updateHardware(context, {id: 'id'}, hsvToColor(xToHue(x), SAT, VAL));
+				lastX = x;
+			}
 		}
 	}
 
 	canvas.onmouseup = function(e) {
 		const x = e.clientX;
 		const y = e.clientY;
-		if(isInPalette(x, y)) {
-			color = paletteColor(x, y);
-		}
 
 		drawing = false;
 
 		const light = findLight(x, y);
 		console.log("light: " + JSON.stringify(light));
 
-		updateHardware(context, light, color);
-
 		if( isInPalette(x, y) ) {
-			color = paletteColor(x, y);
+			color = paletteColor(context, x, y);
 			console.log("color: " + color);
 		}
 		if( isInHue(x,y) ) {
+			const light = findLight(10, y);
 			hue = xToHue(x);
 			drawPalette(canvas, hue);
 			drawHues(canvas);

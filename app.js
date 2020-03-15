@@ -3,36 +3,54 @@ var app = express();
 var http = require('http');
 const httpServer = http.Server(app)
 const bodyParser = require('body-parser');
-const request = require('request');
+const rp = require('request-promise');
 
 app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
 
-var port = 3000;
+var PORT = 3000;
+const DOMAIN = process.env.SIM ? 'localhost:5000' : '10.0.0.88'
 
-app.get('/boards', function (req, res) {
-	request('http://localhost:5000/winky_blinky', (error, response, body) => {
-		res.send(body);
+app.get('/boards/:id', function (req, res) {
+	rp({
+			uri: `http://${DOMAIN}/winky_blinkies/${req.params.id}`,
+			json: true,
+			method: 'GET',
+	})
+	.then(function (response) {
+		res.status(200).send(response);
+	})
+	.catch(function (err) {
+		console.log(err);
 	});
+
 });
 
 app.put('/pixel/:id', function (req, res) {
 	console.log(`/pixel/${req.params.id} `  + JSON.stringify(req.body))
-	const request = http.request({
-		  hostname: 'localhost',
-		  port: 5000,
-		  path: `/lights/${req.params.id}`,
-		  method: 'PUT',
-		  headers: {
-		    'Content-Type': 'application/json',
-		  }
-		});
-	request.write(JSON.stringify(req.body), () => {
-		request.end();
-		res.send(request.response);		
+
+	const { id, color } = {...req.body};
+	rp({
+			uri: `http://${DOMAIN}/lights/${req.params.id}`,
+			json: true,
+			method: 'PUT',
+			body: req.body
+	})
+	.then(function (response) {
+		res.status(200).send(response);
+	})
+	.catch(function (err) {
+		console.log(err);
 	});
 });
 
-httpServer.listen(port, function() {
-	console.log('Server running on port ' + port);
+httpServer.listen(PORT, function() {
+	console.log('Server running on port ' + PORT);
+	if( process.env.SIM ) {
+		console.log("Simulating to localhost:5000");
+	}
 });
+
+httpServer.on('error', err => {
+	console.log(err);
+})

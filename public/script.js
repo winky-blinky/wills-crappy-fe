@@ -29,7 +29,7 @@ function drawLight(context, light, color) {
 	ly = light.y;
 	if( isInCanvas(lx, ly) ) {
 		context.fillStyle = color;
- 		context.fillRect(lx, ly, w, w);
+ 		context.fillRect(lx-5, ly-5, w, w);
 		context.stroke();
 	}
 }
@@ -120,7 +120,7 @@ function calcPaletteColor(x, y) {
 function drawBoard(context, winky_blinky) {
 	winky_blinky.board.forEach(light => {
 		context.beginPath();
-		context.rect(light.x, light.y, 10, 10);
+		context.rect(light.x-5, light.y-5, 10, 10);
 		context.strokeStyle = "gray";
 		context.lineWidth = 1;
 		context.stroke();
@@ -131,7 +131,7 @@ function updateHardware(context, light, color) {
 	if(light) {
 		light.color = color;
 		const request = new XMLHttpRequest();
-		request.open("PUT", `http://localhost:3000/pixel/${light.id}`);
+		request.open("PUT", `http://localhost:3000/pixel/${light.lightId}`);
 		request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 		request.onload = () => {
 			if(request.status === 200) {
@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	drawHues(canvas);
 
 	const request = new XMLHttpRequest();
-	request.open("GET", "http://localhost:3000/boards/8c723198-19ef-46fb-93ca-71114cfd151f");
+	request.open("GET", "http://localhost:3000/boards/a73d211b-db32-4f9c-8b04-30097ec1ea98");
 	request.send();
 	request.onload = () => {
 		if(request.status === 200) {
@@ -185,11 +185,11 @@ document.addEventListener("DOMContentLoaded", function() {
 		const x = e.clientX;
 		const y = e.clientY;
 		if( drawing ) {
+
 			if( isInCanvas(x, y) ) {
 				const lastLight = findLight(lastX, lastY);
 				const thisLight = findLight(x, y);
-
-				if(lastLight.id !== thisLight.id) {
+				if(lastLight.lightId !== thisLight.lightId) {
 					updateHardware(context, thisLight, color);
 					drawLight(context, thisLight, color);
 				}
@@ -198,9 +198,10 @@ document.addEventListener("DOMContentLoaded", function() {
 				lastY = y;
 			}
 		}
+		// INSERT: for tracking hues to the light color.
 		if(isInHue(x, y)) {
 			if(Math.abs(lastX - x) > 10) {
-				updateHardware(context, {id: 'id'}, hsvToColor(xToHue(x), SAT, VAL));
+				updateHardware(context, {lightId: 'c381f5c6-fa1e-4c76-9d91-10d175e92eb6'}, hsvToColor(xToHue(x), SAT, VAL));
 				lastX = x;
 			}
 		}

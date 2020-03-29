@@ -19,8 +19,9 @@ function xToHue(x) {
 
 function findLight(x, y) {
 	return winky_blinky.board.find(e => {
-		if(Math.abs(e.x-x) <= 5 && Math.abs(e.y-y) <= 5)
+		if(Math.abs(e.x-x) <= 5 && Math.abs(e.y-y) <= 5) {
 			return e;
+		}
 	});
 }
 
@@ -134,8 +135,8 @@ function updateHardware(context, light, color) {
 		request.open("PUT", `http://localhost:3000/pixel/${light.lightId}`);
 		request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 		request.onload = () => {
-			if(request.status === 200) {
-				console.log("updateHardware successful");
+			if(request.status !== 200) {
+				console.log("updateHardware failed");
 			}
 		}
 		request.send(JSON.stringify(light));
@@ -158,7 +159,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	drawHues(canvas);
 
 	const request = new XMLHttpRequest();
-	request.open("GET", "http://localhost:3000/boards/a73d211b-db32-4f9c-8b04-30097ec1ea98");
+	request.open("GET", "http://localhost:3000/boards/f5104b2");
 	request.send();
 	request.onload = () => {
 		if(request.status === 200) {

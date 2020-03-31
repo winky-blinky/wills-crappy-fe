@@ -3,6 +3,7 @@ const nx = 10;
 const ny = 10;
 const SAT = 0.99;
 const VAL = 0.99;
+var HOST
 
 var winky_blinky;
 
@@ -132,14 +133,14 @@ function updateHardware(context, light, color) {
 	if(light) {
 		light.color = color;
 		const request = new XMLHttpRequest();
-		request.open("PUT", `http://localhost:3000/pixel/${light.lightId}`);
+		request.open("PUT", `http://${HOST}/lights/${light.lightId}`);
 		request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 		request.onload = () => {
 			if(request.status !== 200) {
 				console.log("updateHardware failed");
 			}
 		}
-		request.send(JSON.stringify(light));
+		request.send(JSON.stringify({...light, id: light.lightId}));
 	}
 }
 
@@ -151,6 +152,10 @@ document.addEventListener("DOMContentLoaded", function() {
 	var drawing = false;
 	var lastX, lastY;
 
+
+	HOST = window.location.host
+	console.log(`Host is: ${HOST}`);
+
 	console.log(color)
 	canvas.width = width;
 	canvas.height = height;
@@ -159,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	drawHues(canvas);
 
 	const request = new XMLHttpRequest();
-	request.open("GET", "http://localhost:3000/boards/f5104b2");
+	request.open("GET", `http://${HOST}/winky_blinkies/f5104b2`);
 	request.send();
 	request.onload = () => {
 		if(request.status === 200) {

@@ -13,7 +13,7 @@ app.use(express.static(__dirname + '/public'));
 var PORT = 3000;
 const DOMAIN = process.env.SIM ? 'localhost:5000' : '10.0.0.154'
 
-app.get('/boards/:id', function (req, res) {
+app.get('/winky_blinkies/:id', function (req, res) {
 	rp({
 			uri: `http://${DOMAIN}/winky_blinkies/${req.params.id}`,
 			json: true,
@@ -29,11 +29,11 @@ app.get('/boards/:id', function (req, res) {
 
 });
 
-app.put('/pixel/:id', function (req, res) {
-	console.log(`/pixel/${req.params.id} `  + JSON.stringify(req.body))
+app.put('/lights/:id', function (req, res) {
+	console.log(`/lights/${req.params.id} `  + JSON.stringify(req.body))
 
 	// const { id, color } = {...req.body};
-	const light = {id: req.body.lightId, color: req.body.color}
+	const light = {...req.body}
 	rp({
 			uri: `http://${DOMAIN}/lights/${req.params.id}`,
 			json: true,
